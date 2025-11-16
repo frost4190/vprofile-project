@@ -3,4 +3,4 @@ LABEL "Project"="vprofile"
 LABEL "Author"="Dennis"
 
 RUN rm -rf /etc/nginx/conf.d/default.conf
-COPY vprofile-nginx.conf /etc/nginx/conf.d/default.conf
+COPY nginvproapp.conf /etc/nginx/conf.d/default.conf

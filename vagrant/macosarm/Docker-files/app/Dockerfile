@@ -1,10 +1,10 @@
 FROM maven:3.9.9-eclipse-temurin-21-jammy AS BUILD_IMAGE
 LABEL "Project"="vprofile"
 LABEL "Author"="Dennis"
-RUN git clone -b vp-docker https://github.com/hkhcoder/vprofile-project.git
-RUN cd vprofile-project && mvn install && git checkout containers
+RUN git clone -b containers https://github.com/hkhcoder/vprofile-project.git
+RUN cd vprofile-project && mvn install
 
-FROM tomcat:10-jdk21-
+FROM tomcat:10-jdk21
 RUN rm -rf /usr/local/tomcat/webapps/*
 COPY --from=BUILD_IMAGE vprofile-project/target/vprofile-v2.war /usr/local/tomcat/webapps/ROOT.war
 EXPOSE 8080
