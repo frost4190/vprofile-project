@@ -1,0 +1,53 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vprodb
+  namespace: vprofile
+  labels:
+    app: vprodb
+spec:
+  selector:
+    matchLabels:
+      app: vprodb
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: vprodb
+    spec:
+      containers:
+      - name: vprodb
+        image: frost4190/vprofiledb
+        ports:
+        - name: vprodb-port
+          containerPort: 3306
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: app-secret
+              key: db-pass
+        - name: MYSQL_DATABASE
+          value: "accounts"
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        volumeMounts:
+        - mountPath: /var/lib/mysql
+          name: vpro-db-data
+        - mountPath: /docker-entrypoint-initdb.d/db_backup.sql
+          name: vpro-db-init
+          subPath: db_backup.sql
+      nodeSelector:
+        zone: us-east-1a
+      volumes:
+      - name: vpro-db-data
+        persistentVolumeClaim:
+          claimName: db-pv-claim
+      - name: vpro-db-init
+        configMap:
+          name: vprodb-config

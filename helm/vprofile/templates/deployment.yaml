@@ -1,0 +1,76 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "vprofile.fullname" . }}
+  labels:
+    {{- include "vprofile.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "vprofile.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+      labels:
+        {{- include "vprofile.selectorLabels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.service.targetPort }}
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 60
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          env:
+            - name: DB_HOST
+              value: "{{ include "vprofile.fullname" . }}-mysql"
+            - name: DB_PORT
+              value: "3306"
+            - name: DB_NAME
+              value: {{ .Values.mysql.auth.database }}
+            - name: DB_USER
+              value: "root"
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "vprofile.fullname" . }}-mysql
+                  key: mysql-root-password
+            - name: MEMCACHED_HOST
+              value: "{{ include "vprofile.fullname" . }}-memcached"
+            - name: RABBITMQ_HOST
+              value: "{{ include "vprofile.fullname" . }}-rabbitmq"
+      initContainers:
+        - name: wait-for-db
+          image: busybox:1.35
+          command: ['sh', '-c']
+          args:
+            - until nc -z {{ include "vprofile.fullname" . }}-mysql 3306; do echo waiting for db; sleep 2; done;
+        - name: wait-for-memcached
+          image: busybox:1.35
+          command: ['sh', '-c']
+          args:
+            - until nc -z {{ include "vprofile.fullname" . }}-memcached 11211; do echo waiting for memcached; sleep 2; done;
+        - name: wait-for-rabbitmq
+          image: busybox:1.35
+          command: ['sh', '-c']
+          args:
+            - until nc -z {{ include "vprofile.fullname" . }}-rabbitmq 5672; do echo waiting for rabbitmq; sleep 2; done;

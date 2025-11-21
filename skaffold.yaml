@@ -1,0 +1,45 @@
+apiVersion: skaffold/v4beta7
+kind: Config
+metadata:
+  name: vprofile
+build:
+  artifacts:
+  - image: frost4190/vprofileapp
+    docker:
+      dockerfile: Dockerfile
+  tagPolicy:
+    sha256: {}
+deploy:
+  helm:
+    releases:
+    - name: vprofile
+      chartPath: helm/vprofile
+      namespace: vprofile-dev
+      createNamespace: true
+      setValues:
+        image.tag: frost4190/vprofileapp
+        replicaCount: 1
+        ingress.hosts[0].host: vprofile-dev.local
+profiles:
+- name: dev
+  deploy:
+    helm:
+      releases:
+      - name: vprofile
+        chartPath: helm/vprofile
+        namespace: vprofile-dev
+        setValues:
+          replicaCount: 1
+          resources.requests.cpu: 100m
+          resources.requests.memory: 256Mi
+- name: prod
+  deploy:
+    helm:
+      releases:
+      - name: vprofile
+        chartPath: helm/vprofile
+        namespace: vprofile-prod
+        setValues:
+          replicaCount: 3
+          resources.requests.cpu: 500m
+          resources.requests.memory: 1Gi

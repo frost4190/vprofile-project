@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vproapp
+  namespace: vprofile
+  labels:
+    app: vproapp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vproapp
+  template:
+    metadata:
+      labels:
+        app: vproapp
+    spec:
+      containers:
+      - name: vproapp
+        image: frost4190/vprofileapp:latest
+        ports:
+        - containerPort: 8080
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+      initContainers:
+      - name: init-db
+        image: busybox
+        command: ['sh', '-c', 'until nc -z vprodb.vprofile.svc.cluster.local 3306; do sleep 2; done;']
+      - name: init-memcache
+        image: busybox
+        command: ['sh', '-c', 'until nc -z vpromc.vprofile.svc.cluster.local 11211; do sleep 2; done;']
+      - name: init-rmq
+        image: busybox
+        command: ['sh', '-c', 'until nc -z vpromq01.vprofile.svc.cluster.local 5672; do sleep 2; done;']
